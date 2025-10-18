@@ -23,3 +23,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backend ignore files
+.env
+.env.local
+.venv
+__pycache__/
