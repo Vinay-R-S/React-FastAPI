@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -33,6 +34,7 @@ interface Product {
 }
 
 export default function AdminHome() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date");
@@ -174,20 +176,28 @@ export default function AdminHome() {
               </p>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditProduct(product);
-                  setForm({
-                    name: product.name,
-                    description: product.description || "",
-                    price: product.price || "",
-                  });
-                  setIsDialogOpen(true);
-                }}
-              >
-                Edit
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/admin/product/${product.id}/reviews`)}
+                >
+                  View Reviews
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditProduct(product);
+                    setForm({
+                      name: product.name,
+                      description: product.description || "",
+                      price: product.price || "",
+                    });
+                    setIsDialogOpen(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
               <Button
                 variant="destructive"
                 onClick={() => deleteProduct(product.id)}

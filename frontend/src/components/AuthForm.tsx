@@ -72,6 +72,14 @@ function AuthForm() {
             (isSignUp ? "Account created successfully!" : "Login successful!")
         );
 
+        // Store token and user data
+        if (data.access_token) {
+          localStorage.setItem("token", data.access_token);
+        }
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+
         // Clear inputs
         (document.getElementById("email") as HTMLInputElement).value = "";
         (document.getElementById("password") as HTMLInputElement).value = "";
@@ -83,8 +91,11 @@ function AuthForm() {
 
         // Redirect based on role
         setTimeout(() => {
-          if (isSignUp && isAdmin) navigate("/admin-home");
-          else navigate("/user-home");
+          if (data.user?.is_admin) {
+            navigate("/admin-home");
+          } else {
+            navigate("/user-home");
+          }
         }, 1000);
       } else {
         toast.error(data.detail || "Something went wrong. Please try again.");

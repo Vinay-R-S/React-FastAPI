@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -15,10 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// ⛔ Removed deprecated useToast
-// import { useToast } from "@/components/ui/use-toast";
-
-// ✅ Import Sonner toast
 import { toast } from "sonner";
 
 interface Product {
@@ -30,6 +27,7 @@ interface Product {
 }
 
 export default function UserHome() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date");
@@ -103,11 +101,9 @@ export default function UserHome() {
             <CardFooter>
               <Button
                 variant="default"
-                onClick={() =>
-                  (window.location.href = `/product/${product.id}/reviews`)
-                }
+                onClick={() => navigate(`/product/${product.id}/reviews`)}
               >
-                View Reviews
+                View Reviews & Add Review
               </Button>
             </CardFooter>
           </Card>

@@ -3,6 +3,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import AuthForm from "./components/AuthForm";
 import AdminHome from "./components/AdminHome";
 import UserHome from "./components/UserHome";
+import ProductDetails from "./components/ProductDetails";
+import AdminReviews from "./components/AdminReviews";
 import { ModeToggle } from "./components/mode-toggle";
 import { Toaster } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -22,8 +24,8 @@ function App() {
                   <div className="absolute top-4 right-4 z-50">
                     <ModeToggle />
                   </div>
-                  {/* <AuthForm /> */}
-                  <AdminHome/>
+                  <AuthForm />
+                  {/* <AdminHome/> */}
                 </div>
               </div>
             }
@@ -31,6 +33,8 @@ function App() {
 
           <Route path="/admin-home" element={<AdminHome />} />
           <Route path="/user-home" element={<UserHome />} />
+          <Route path="/product/:productId/reviews" element={<ProductDetails />} />
+          <Route path="/admin/product/:productId/reviews" element={<AdminReviews />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
