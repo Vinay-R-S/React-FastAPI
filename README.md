@@ -2,7 +2,7 @@
 
 > **ProUX** is a small full-stack application (frontend + backend) that lets users sign up / log in, browse products, add reviews, and — for admins — manage products and delete any review.
 
-This README covers everything from **initial setup** to **running the app**, the **API** (endpoints + examples), and the **overall architecture**. It also includes troubleshooting tips and recommended next steps.
+This README covers everything from **initial setup** to **running the app**, the **API** (endpoints + examples), and the **overall architecture**.
 
 ---
 
