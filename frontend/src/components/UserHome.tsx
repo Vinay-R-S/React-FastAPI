@@ -44,6 +44,17 @@ export default function UserHome() {
   };
 
   useEffect(() => {
+    // Defensive role check: if not logged in, go to login; if admin, redirect to admin home
+    const userStr = localStorage.getItem("user");
+    let user: any = null;
+    try {
+      user = userStr ? JSON.parse(userStr) : null;
+    } catch (e) {
+      user = null;
+    }
+    if (!user) return navigate("/");
+    if (user.is_admin) return navigate("/admin-home");
+
     fetchProducts();
   }, []);
 
@@ -100,6 +111,7 @@ export default function UserHome() {
             </CardContent>
             <CardFooter>
               <Button
+                className="text-white"
                 variant="default"
                 onClick={() => navigate(`/product/${product.id}/reviews`)}
               >

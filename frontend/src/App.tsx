@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import AuthForm from "./components/AuthForm";
 import AdminHome from "./components/AdminHome";
 import UserHome from "./components/UserHome";
+import ProtectedRoute from "./components/ProtectedRoute";
 import ProductDetails from "./components/ProductDetails";
 import AdminReviews from "./components/AdminReviews";
 import { ModeToggle } from "./components/mode-toggle";
@@ -25,14 +26,27 @@ function App() {
                     <ModeToggle />
                   </div>
                   <AuthForm />
-                  {/* <AdminHome/> */}
                 </div>
               </div>
             }
           />
 
-          <Route path="/admin-home" element={<AdminHome />} />
-          <Route path="/user-home" element={<UserHome />} />
+          <Route
+            path="/admin-home"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user-home"
+            element={
+              <ProtectedRoute requiredRole="user">
+                <UserHome />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/product/:productId/reviews" element={<ProductDetails />} />
           <Route path="/admin/product/:productId/reviews" element={<AdminReviews />} />
         </Routes>
@@ -42,30 +56,3 @@ function App() {
 }
 
 export default App;
-
-// import './App.css'
-// import { ThemeProvider } from "@/components/theme-provider"
-// import AuthForm from './components/AuthForm.tsx'
-// import { ModeToggle } from './components/mode-toggle.tsx'
-// import { Toaster } from "sonner";
-
-// function App() {
-//   return (
-//     <>
-//       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-//         {/* your routes/components */}
-//       <Toaster richColors position="top-right" />
-//         <div className='w-full'>
-//             <div className="relative min-h-screen flex items-center justify-center">
-//               <div className="absolute top-4 right-4 z-50">
-//                 <ModeToggle/>
-//               </div>
-//               <AuthForm/>
-//             </div>
-//         </div>
-//       </ThemeProvider>
-//     </>
-//   )
-// }
-
-// export default App

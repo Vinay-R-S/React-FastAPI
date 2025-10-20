@@ -342,7 +342,7 @@ const ProductDetails: React.FC = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
+                <Button type="submit" className="flex-1 text-white">
                   {editingReview ? "Update Review" : "Submit Review"}
                 </Button>
                 {editingReview && (
