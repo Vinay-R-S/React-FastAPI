@@ -197,7 +197,7 @@ export default function AdminHome() {
                   variant="outline"
                   onClick={() => navigate(`/admin/product/${product.id}/reviews`)}
                 >
-                  View Reviews
+                  Reviews
                 </Button>
                 <Button
                   variant="outline"

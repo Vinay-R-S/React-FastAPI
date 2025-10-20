@@ -6,23 +6,6 @@ This README covers everything from **initial setup** to **running the app**, the
 
 ---
 
-## Table of Contents
-
-1. [Project Structure](#project-structure)
-2. [Tech Stack](#tech-stack)
-3. [Environment & Configuration](#environment--configuration)
-4. [Initial Setup (Backend)](#initial-setup-backend)
-5. [Initial Setup (Frontend)](#initial-setup-frontend)
-6. [Run Locally](#run-locally)
-7. [API Reference](#api-reference)
-8. [Authentication & Authorization](#authentication--authorization)
-9. [Database schema expectations (Supabase)](#database-schema-expectations-supabase)
-10. [Architecture (diagram + explanation)](#architecture-diagram--explanation)
-11. [Troubleshooting & Tips](#troubleshooting--tips)
-12. [Next steps & Improvements](#next-steps--improvements)
-
----
-
 ## Project Structure
 
 ```
@@ -39,19 +22,19 @@ project/
 │  ├─ src/
 │  │  ├─ App.tsx
 │  │  ├─ main.tsx
-│  │  └─ components/          # React components (AuthForm, AdminHome, UserHome, ProductDetails, AdminReviews)
+│  │  └─ components/          
 │  └─ public/
 
-```
+# React components (AuthForm, AdminHome, UserHome, ProductDetails, AdminReviews, ProtectedRoute, theme-provider, mode-toggle)
 
-I used the names from the project you provided. The frontend is a Vite + React(Typescript) app with Tailwind/ui components. The backend is a FastAPI app talking to Supabase via its Python client.
+```
 
 ---
 
 ## Tech Stack
 
-* **Backend:** FastAPI (Python), Supabase (Postgres-like DB + REST), jose (JWT), bcrypt (password hashing)
-* **Frontend:** React + TypeScript, Vite, Tailwind-like components, react-router, Sonner (toasts)
+* **Backend:** FastAPI (Python), Supabase (Postgres-like DB using Supabase + REST), jose (JWT), bcrypt (password hashing)
+* **Frontend:** React + TypeScript, Vite, Tailwind-like components, ShadCn, React Router
 * **Auth:** JWT bearer tokens (signed with `SECRET_KEY` in `main.py`)
 
 ---
@@ -63,12 +46,9 @@ I used the names from the project you provided. The frontend is a Vite + React(T
 ```
 SUPABASE_URL=<your-supabase-url>
 SUPABASE_KEY=<your-service-role-or-api-key>
+SECRET_KEY=<your-secret-key>
+ALGORITHM=<hash-algorithm-code>
 ```
-
-**Important**
-
-* `SECRET_KEY` is currently hard-coded in `main.py` as `"dummy_key"`. **Change this** for production — store it in env vars and read from `os.environ`.
-* `SUPABASE_KEY` in `.env` should be kept secret. For server-side usage you can use service role key but be aware of the permissions.
 
 **Frontend**
 
@@ -84,8 +64,8 @@ SUPABASE_KEY=<your-service-role-or-api-key>
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate   # on macOS / Linux
-.venv\Scripts\activate     # on Windows
+source .venv/bin/activate      # on macOS / Linux
+.venv\Scripts\activate         # on Windows
 ```
 
 2. Install dependencies:
@@ -140,7 +120,7 @@ Start frontend (from frontend/):
 
 ```bash
 npm run dev
-# open http://localhost:5173
+open http://localhost:5173
 ```
 
 Visit the app, sign up and log in. Admin users should be created with `is_admin=true` at signup to access admin endpoints.
@@ -149,11 +129,12 @@ Visit the app, sign up and log in. Admin users should be created with `is_admin=
 
 ## API Reference
 
+> API docs URL: `http://localhost:5173/api.html` <br>
 > Base URL (development): `http://127.0.0.1:8000`
 
 ### Auth
 
-#### `POST /signup`
+#### Method: `POST` Route: `/signup`
 
 Create a user.
 
@@ -179,7 +160,7 @@ Response (200):
 }
 ```
 
-#### `POST /login`
+#### Method: `POST` Route: `/login`
 
 Login and receive a JWT.
 
@@ -195,7 +176,7 @@ Response includes `access_token` and `user` object.
 
 ### Products
 
-#### `GET /products`
+#### Method: `GET` Route: `/products`
 
 List products. Query params supported: `search`, `sort_by` (default `created_at`), `order` (asc|desc).
 
@@ -205,7 +186,7 @@ Response:
 { "data": [ { "id": 1, "name": "Product A", "description": "...", "price": "400" } ] }
 ```
 
-#### `POST /products`  (Admin only)
+#### Method: `POST` Route: `/products`  (Admin only)
 
 Create product.
 
@@ -217,11 +198,11 @@ Body:
 { "name": "New product", "description": "...", "price": "123" }
 ```
 
-#### `PUT /products/{product_id}`  (Admin only)
+#### Method: `PUT` Route: `/products/{product_id}`  (Admin only)
 
 Update product fields (partial allowed).
 
-#### `DELETE /products/{product_id}`  (Admin only)
+#### Method: `DELETE` Route: `/products/{product_id}`  (Admin only)
 
 Delete a product.
 
@@ -229,7 +210,7 @@ Delete a product.
 
 ### Reviews
 
-#### `GET /products/{product_id}/reviews`
+#### Method: `GET` Route: `/products/{product_id}/reviews`
 
 List reviews for a product. Supports `min_rating`, `max_rating`, `sort_by`, `order`.
 
@@ -239,7 +220,7 @@ Response:
 { "data": [ { "id": 1, "product_id": 2, "user_id": 3, "name": "Bob", "rating": 5, "review": "Great!" } ] }
 ```
 
-#### `POST /products/{product_id}/reviews`  (Authenticated)
+#### Method: `POST` Route: `/products/{product_id}/reviews`  (Authenticated)
 
 Add a review for a product.
 
@@ -253,15 +234,15 @@ Body:
 
 Response: created review object.
 
-#### `PUT /reviews/{review_id}` (Authenticated — owner only)
+#### Method: `PUT` Route: `/reviews/{review_id}` (Authenticated — owner only)
 
 Update your review.
 
-#### `DELETE /reviews/{review_id}` (Authenticated — owner only)
+#### Method: `DELETE` Route: `/reviews/{review_id}` (Authenticated — owner only)
 
 Delete your review.
 
-#### `DELETE /admin/reviews/{review_id}` (Admin only)
+#### Method: `DELETE` Route: `/admin/reviews/{review_id}` (Admin only)
 
 Admin may delete any review.
 
@@ -313,12 +294,7 @@ Create these tables in Supabase (SQL editor or GUI):
 
 ## Architecture — diagram & explanation
 
-```
-[Browser / React UI] <--> [FastAPI Backend] <--> [Supabase DB]
-         |                 ^                     |
-         |                 |                     |
-         +-- localStorage --+                     +-- Supabase SQL Tables (users, products, reviews)
-```
+![Architecture](frontend/src/assets/Architecture.png)
 
 **Flow examples**
 
@@ -364,13 +340,4 @@ cd frontend
 npm install
 npm run dev
 ```
-
 ---
-
-If you want, I can:
-
-* generate a `docker-compose.yml` to run both services together, or
-* create a `.env.example` and script to centralize API host for the frontend, or
-* produce a Postman collection / cURL examples for each endpoint.
-
-Tell me which of the above you want next and I will add it directly in the canvas file.

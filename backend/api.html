@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Feedback System API — README</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            color: #0b1221;
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .card {
+            border-radius: 12px;
+            border: 1px solid #e6eef8;
+            padding: 22px;
+            margin: 14px 0;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            box-shadow: 0 6px 18px rgba(20, 40, 80, 0.04);
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 26px;
+            color: #072241;
+        }
+
+        h2 {
+            margin: 18px 0 6px 0;
+            font-size: 18px;
+            color: #072241;
+        }
+
+        p.lead {
+            margin: 6px 0 18px 0;
+            color: #374151;
+        }
+
+        code {
+            background: #f4f7fb;
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        }
+
+        pre {
+            background: #0f1724;
+            color: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            overflow: auto;
+            font-size: 13px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 1px solid #eef4fb;
+        }
+
+        th {
+            background: linear-gradient(180deg, #f8fbff, #ffffff);
+            color: #0b1221;
+            font-weight: 600;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .note {
+            background: #fff9ed;
+            border: 1px solid #ffecb5;
+            padding: 10px;
+            border-radius: 8px;
+            color: #92400e;
+            margin: 10px 0;
+        }
+
+        .kbd {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #eef2ff;
+            border: 1px solid #e0e7ff;
+            font-family: ui-monospace, monospace;
+        }
+
+        .endpoint {
+            font-weight: 700;
+            color: #0b3a66;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #0b3a66;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+
+        .example {
+            margin: 8px 0 16px 0;
+        }
+
+        .flex {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .muted-block {
+            color: #475569;
+            background: #fbfeff;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e6f0fb;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>Feedback System API</h1>
+        <p class="lead">Simple feedback collection API. This README contains the development base URL, endpoints,
+            request/response examples, and notes for authentication and roles.</p>
+
+        <div class="muted-block">
+            <strong>Base URL (development):</strong>
+            <div style="margin-top:6px;"><code>http://127.0.0.1:8000</code></div>
+        </div>
+
+        <h2>Authentication</h2>
+        <p class="muted">This API uses JWT tokens. Signup and login return an <code>access_token</code> which must be
+            sent as <code>Authorization: Bearer &lt;token&gt;</code> for protected endpoints.</p>
+
+        <h3 class="muted">POST <span class="endpoint">/signup</span></h3>
+        <p class="muted">Create a user account.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>email</code></td>
+                    <td>string</td>
+                    <td>Unique email</td>
+                </tr>
+                <tr>
+                    <td><code>password</code></td>
+                    <td>string</td>
+                    <td>Plain text (server will hash)</td>
+                </tr>
+                <tr>
+                    <td><code>name</code></td>
+                    <td>string</td>
+                    <td>Display name</td>
+                </tr>
+                <tr>
+                    <td><code>is_admin</code></td>
+                    <td>boolean</td>
+                    <td>Set to <code>true</code> for admin users (use carefully)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="example">
+            <strong>Request body</strong>
+            <pre>{
+  "email": "alice@example.com",
+  "password": "supersecret",
+  "name": "Alice",
+  "is_admin": false
+}</pre>
+
+            <strong>Response (200)</strong>
+            <pre>{
+  "message": "Signup successful!",
+  "access_token": "&lt;jwt&gt;",
+  "token_type": "bearer",
+  "user": { "id": 1, "name": "Alice", "email": "alice@example.com", "is_admin": false }
+}</pre>
+        </div>
+
+        <h3 class="muted">POST <span class="endpoint">/login</span></h3>
+        <p class="muted">Authenticate and receive a JWT token.</p>
+        <pre>{
+  "email": "alice@example.com",
+  "password": "supersecret"
+}</pre>
+
+        <p class="note"><strong>Note:</strong> Keep the <code>access_token</code> safe. Use it in the header:
+            <code>Authorization: Bearer &lt;access_token&gt;</code>
+        </p>
+
+        <h2>Products</h2>
+        <p class="muted">Products endpoints let you list and (admin) manage products.</p>
+
+        <h3 class="muted">GET <span class="endpoint">/products</span></h3>
+        <p class="muted">List products. Query params:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Query</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>search</code></td>
+                    <td>Search by product name or description</td>
+                </tr>
+                <tr>
+                    <td><code>sort_by</code></td>
+                    <td>Field to sort by (default: <code>created_at</code>)</td>
+                </tr>
+                <tr>
+                    <td><code>order</code></td>
+                    <td><code>asc</code> or <code>desc</code> (default: <code>desc</code>)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="example">
+            <strong>Response</strong>
+            <pre>{
+  "data": [
+    { "id": 1, "name": "Product A", "description": "...", "price": "400" }
+  ]
+}</pre>
+        </div>
+
+        <h3 class="muted">POST <span class="endpoint">/products</span> <span class="badge">Admin</span></h3>
+        <p class="muted">Create a product. Requires <code>Authorization</code> header with admin token.</p>
+        <pre>{
+  "name": "New product",
+  "description": "Short description",
+  "price": "123"
+}</pre>
+
+        <h3 class="muted">PUT <span class="endpoint">/products/{product_id}</span> <span class="badge">Admin</span></h3>
+        <p class="muted">Update product fields (partial updates allowed).</p>
+
+        <h3 class="muted">DELETE <span class="endpoint">/products/{product_id}</span> <span class="badge">Admin</span>
+        </h3>
+        <p class="muted">Delete an existing product.</p>
+
+        <h2>Reviews</h2>
+        <p class="muted">Reviews are attached to products. Authenticated users can CRUD their own reviews; admins can
+            delete any review.</p>
+
+        <h3 class="muted">GET <span class="endpoint">/products/{product_id}/reviews</span></h3>
+        <p class="muted">List reviews for a product. Supports query params:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Query</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>min_rating</code></td>
+                    <td>Minimum rating filter</td>
+                </tr>
+                <tr>
+                    <td><code>max_rating</code></td>
+                    <td>Maximum rating filter</td>
+                </tr>
+                <tr>
+                    <td><code>sort_by</code></td>
+                    <td>Field like <code>created_at</code> or <code>support_count</code></td>
+                </tr>
+                <tr>
+                    <td><code>order</code></td>
+                    <td><code>asc</code> or <code>desc</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="example">
+            <strong>Response</strong>
+            <pre>{
+  "data": [
+    {
+      "id": 1,
+      "product_id": 2,
+      "user_id": 3,
+      "name": "Bob",
+      "rating": 5,
+      "review": "Great!",
+      "support_count": 10,
+      "created_at": "2025-10-01T12:34:56Z"
+    }
+  ]
+}</pre>
+        </div>
+
+        <h3 class="muted">POST <span class="endpoint">/products/{product_id}/reviews</span> <span
+                class="badge">Auth</span></h3>
+        <p class="muted">Add a review for a product. Requires <code>Authorization</code> header.</p>
+        <pre>{
+  "name": "Bob",
+  "email": "bob@example.com",
+  "phone_number": "1234567890",
+  "rating": 5,
+  "review": "Loved it"
+}</pre>
+
+        <h3 class="muted">PUT <span class="endpoint">/reviews/{review_id}</span> <span class="badge">Owner</span></h3>
+        <p class="muted">Update your review (owner-only). Provide changed fields in the body.</p>
+
+        <h3 class="muted">DELETE <span class="endpoint">/reviews/{review_id}</span> <span class="badge">Owner</span>
+        </h3>
+        <p class="muted">Delete your review (owner-only).</p>
+
+        <h3 class="muted">DELETE <span class="endpoint">/admin/reviews/{review_id}</span> <span
+                class="badge">Admin</span></h3>
+        <p class="muted">Admin may delete any review.</p>
+
+        <h2>Database Schema (summary)</h2>
+        <p class="muted">Simple summary of essential tables:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Important Columns</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>users</td>
+                    <td><code>id, name, email, password_hash, is_admin, created_at</code></td>
+                </tr>
+                <tr>
+                    <td>products</td>
+                    <td><code>id, name, description, price, created_at, updated_at</code></td>
+                </tr>
+                <tr>
+                    <td>reviews</td>
+                    <td><code>id, user_id (FK), product_id (FK), name, email, phone_number, rating, review, support_count, created_at, updated_at</code>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Common Requests (cURL)</h2>
+        <div class="example">
+            <strong>Login (cURL)</strong>
+            <pre>curl -X POST http://127.0.0.1:8000/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","password":"supersecret"}'</pre>
+
+            <strong>List products (with search & sort)</strong>
+            <pre>curl "http://127.0.0.1:8000/products?search=widget&sort_by=name&order=asc"</pre>
+
+            <strong>Create product (admin)</strong>
+            <pre>curl -X POST http://127.0.0.1:8000/products \
+  -H "Authorization: Bearer &lt;ADMIN_TOKEN&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"New product","description":"desc","price":"199"}'</pre>
+
+            <strong>Post a review (auth)</strong>
+            <pre>curl -X POST http://127.0.0.1:8000/products/2/reviews \
+  -H "Authorization: Bearer &lt;USER_TOKEN&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Bob","email":"bob@example.com","phone_number":"1234567890","rating":5,"review":"Loved it"}'</pre>
+        </div>
+
+        <h2>Tips & Notes</h2>
+        <ul>
+            <li class="muted">JWT tokens must be included for any endpoints marked <span class="badge">Auth</span> or
+                <span class="badge">Admin</span>.
+            </li>
+            <li class="muted">Admins should limit usage of admin endpoints — consider protecting them further by IP or
+                additional checks in production.</li>
+            <li class="muted">Support counts are integers and can be used to sort/popularize reviews.</li>
+            <li class="muted">Pagination: endpoints that return lists should include pagination parameters (page,
+                per_page) in production. Add them to the query when you implement client-side pagination.</li>
+        </ul>
+
+        <h2>Response Conventions</h2>
+        <p class="muted">Standard success wrapper:</p>
+        <pre>{
+  "message": "Human readable message",
+  "data": { ... }   // when applicable
+}</pre>
+
+        <h2>Error Handling</h2>
+        <p class="muted">Errors use standard HTTP status codes and return JSON:</p>
+        <pre>{
+  "detail": "Error message or reason"
+}</pre>
+    </div>
+</body>
+
+</html>

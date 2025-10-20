@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, Header, Query
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from utils.supabase_client import supabase
@@ -6,22 +7,29 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from typing import Optional, List
 import bcrypt
+from dotenv import load_dotenv
+import os
 
-SECRET_KEY = "dummy_key"  # Move to env var in production
-ALGORITHM = "HS256"
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY not set in environment (.env)")
+
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
 app = FastAPI()
 
-# ----------- CORS -----------
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # frontend origin
+    allow_origins=["http://localhost:5173"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ----------- MODELS -----------
+# Models 
 class ProductCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -53,8 +61,16 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+    
+    
+# API docs path 
+API_HTML_PATH = "./api.html"
 
-# ----------- AUTH HELPERS -----------
+@app.get("/api.html")
+async def serve_api_html():
+    return FileResponse(API_HTML_PATH)
+
+# Auth Helpers
 def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing authorization header")
@@ -70,15 +86,15 @@ def get_current_user(authorization: Optional[str] = Header(None)):
             raise HTTPException(status_code=401, detail="Invalid token payload")
 
         resp = supabase.table("users").select("*").eq("email", sub).limit(1).execute()
-        print(f"Looking for user with email: {sub}")  # Debug log
-        print(f"User lookup result: {resp.data}")  # Debug log
+        # print(f"Looking for user with email: {sub}")  # Debug log
+        # print(f"User lookup result: {resp.data}")  # Debug log
         
         if not resp.data:
-            print(f"No user found with email: {sub}")  # Debug log
+            # print(f"No user found with email: {sub}")  # Debug log
             raise HTTPException(status_code=401, detail="User not found")
         
         user = resp.data[0]
-        print(f"Found user: {user}")  # Debug log
+        # print(f"Found user: {user}")  # Debug log
         return user
 
     except JWTError as e:
@@ -99,7 +115,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# ----------- AUTH ENDPOINTS -----------
+# Auth Endpoints
 
 @app.get("/")
 def root():
@@ -108,21 +124,21 @@ def root():
 @app.post("/signup")
 def signup(data: SignupRequest):
     try:
-        print(f"Signup attempt for email: {data.email}")  # Debug log
+        # print(f"Signup attempt for email: {data.email}")  # Debug log
         
         # Check if user already exists
         existing_user = supabase.table("users").select("*").eq("email", data.email).execute()
-        print(f"Existing user check result: {existing_user}")  # Debug log
-        print(f"Existing user data: {existing_user.data}")  # Debug log
-        print(f"Existing user error: {getattr(existing_user, 'error', None)}")  # Debug log
+        # print(f"Existing user check result: {existing_user}")  # Debug log
+        # print(f"Existing user data: {existing_user.data}")  # Debug log
+        # print(f"Existing user error: {getattr(existing_user, 'error', None)}")  # Debug log
         
         if existing_user.data:
-            print("User already exists")  # Debug log
+            # print("User already exists")  # Debug log
             raise HTTPException(status_code=400, detail="User already exists")
 
         # Hash password
         hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        print("Password hashed successfully")  # Debug log
+        # print("Password hashed successfully")  # Debug log
 
         # Insert into users table
         user_data = {
@@ -133,22 +149,22 @@ def signup(data: SignupRequest):
             "created_at": datetime.utcnow().isoformat()
         }
         
-        print(f"Inserting user data: {user_data}")  # Debug log
+        # print(f"Inserting user data: {user_data}")  # Debug log
         resp = supabase.table("users").insert(user_data).execute()
-        print(f"Insert response: {resp}")  # Debug log
-        print(f"Insert data: {resp.data}")  # Debug log
-        print(f"Insert error: {getattr(resp, 'error', None)}")  # Debug log
+        # print(f"Insert response: {resp}")  # Debug log
+        # print(f"Insert data: {resp.data}")  # Debug log
+        # print(f"Insert error: {getattr(resp, 'error', None)}")  # Debug log
         
         if not resp.data:
-            print("No data returned from insert")  # Debug log
+            # print("No data returned from insert")  # Debug log
             raise HTTPException(status_code=400, detail="Failed to create user")
 
         created_user = resp.data[0]
-        print(f"Created user with ID: {created_user.get('id')}")  # Debug log
+        # print(f"Created user with ID: {created_user.get('id')}")  # Debug log
 
         # Create JWT token
         access_token = create_access_token(data={"sub": data.email})
-        print("JWT token created successfully")  # Debug log
+        # print("JWT token created successfully")  # Debug log
         
         return {
             "message": "Signup successful!",
@@ -163,10 +179,10 @@ def signup(data: SignupRequest):
         }
 
     except HTTPException as e:
-        print(f"HTTPException in signup: {e.detail}")  # Debug log
+        # print(f"HTTPException in signup: {e.detail}")  # Debug log
         raise
     except Exception as e:
-        print(f"General exception in signup: {str(e)}")  # Debug log
+        # print(f"General exception in signup: {str(e)}")  # Debug log
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/login")
@@ -204,7 +220,7 @@ def login(data: LoginRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# ----------- PRODUCT ENDPOINTS -----------
+# Product Endpoints
 
 @app.get("/products")
 def list_products(
@@ -255,7 +271,7 @@ def delete_product(product_id: int):
     resp = supabase.table("products").delete().eq("id", product_id).execute()
     return {"message": "Product deleted"}
 
-# ----------- REVIEW ENDPOINTS -----------
+# Review Endpoints
 
 @app.get("/products/{product_id}/reviews")
 def product_reviews(
@@ -282,9 +298,9 @@ def product_reviews(
 def add_review(product_id: int, payload: ReviewCreate, user=Depends(get_current_user)):
     """User adds a review."""
     try:
-        print(f"Creating review for product_id: {product_id}")  # Debug log
-        print(f"User creating review: {user}")  # Debug log
-        print(f"User ID: {user.get('id')}")  # Debug log
+        # print(f"Creating review for product_id: {product_id}")  # Debug log
+        # print(f"User creating review: {user}")  # Debug log
+        # print(f"User ID: {user.get('id')}")  # Debug log
         
         now = datetime.utcnow().isoformat()
         review_data = {
@@ -298,13 +314,13 @@ def add_review(product_id: int, payload: ReviewCreate, user=Depends(get_current_
             "created_at": now,
             "updated_at": now
         }
-        print(f"Review data to insert: {review_data}")  # Debug log
+        # print(f"Review data to insert: {review_data}")  # Debug log
         
         resp = supabase.table("reviews").insert(review_data).execute()
-        print(f"Insert response: {resp}")  # Debug log
+        # print(f"Insert response: {resp}")  # Debug log
         return {"message": "Review added", "review": resp.data[0]}
     except Exception as e:
-        print(f"Error creating review: {str(e)}")  # Debug log
+        # print(f"Error creating review: {str(e)}")  # Debug log
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.put("/reviews/{review_id}")
@@ -344,7 +360,7 @@ def delete_review(review_id: int, user=Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# ----------- ADMIN REVIEW ENDPOINTS -----------
+# Admin Review Endpoint 
 
 @app.delete("/admin/reviews/{review_id}", dependencies=[Depends(require_admin)])
 def admin_delete_review(review_id: int):
@@ -359,79 +375,3 @@ def admin_delete_review(review_id: int):
         return {"message": "Review deleted by admin"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-
-# from fastapi import FastAPI, HTTPException
-# from fastapi.middleware.cors import CORSMiddleware
-# from pydantic import BaseModel
-# from utils.supabase_client import supabase
-# import bcrypt
-# from datetime import datetime
-
-# app = FastAPI()
-
-# # CORS setup
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["http://localhost:5173"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# # Request models - PyDantic
-# class SignupRequest(BaseModel):
-#     email: str
-#     password: str
-#     name: str
-
-# class LoginRequest(BaseModel):
-#     email: str
-#     password: str
-
-# @app.get("/")
-# def root():
-#     return {"message": "Backend running!"}
-
-# # --------- SIGNUP ----------
-# @app.post("/signup")
-# def signup(data: SignupRequest):
-#     try:
-#         # hash password
-#         hashed_password = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
-
-#         # insert into users table
-#         supabase.table("users").insert({
-#             "name": data.name,
-#             "email": data.email,
-#             "password": hashed_password,
-#             "created_at": datetime.utcnow().isoformat()
-#         }).execute()
-
-#         return {"message": "Signup successful!"}
-
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-
-# # --------- LOGIN ----------
-# @app.post("/login")
-# def login(data: LoginRequest):
-#     try:
-#         # fetch user by email
-#         response = supabase.table("users").select("*").eq("email", data.email).execute()
-#         users = response.data
-
-#         if not users:
-#             raise HTTPException(status_code=404, detail="User not found")
-
-#         user = users[0]
-
-#         # check password
-#         if bcrypt.checkpw(data.password.encode(), user["password"].encode()):
-#             return {"message": "Login successful!", "user": {"id": user["id"], "name": user["name"], "email": user["email"]}}
-#         else:
-#             raise HTTPException(status_code=401, detail="Incorrect password")
-
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=str(e))

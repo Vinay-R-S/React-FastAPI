@@ -1,4 +1,3 @@
-import "./App.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import AuthForm from "./components/AuthForm";
 import AdminHome from "./components/AdminHome";
@@ -9,6 +8,18 @@ import AdminReviews from "./components/AdminReviews";
 import { ModeToggle } from "./components/mode-toggle";
 import { Toaster } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+function ApiDocs() {
+  return (
+    <div className="w-full min-h-screen flex justify-center items-center p-6 bg-background">
+      <iframe
+        src="http://127.0.0.1:8000/api.html"
+        title="API Documentation"
+        className="w-[90%] h-[90vh] border rounded-xl shadow-lg"
+      />
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -47,8 +58,15 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/product/:productId/reviews" element={<ProductDetails />} />
-          <Route path="/admin/product/:productId/reviews" element={<AdminReviews />} />
+          <Route
+            path="/product/:productId/reviews"
+            element={<ProductDetails />}
+          />
+          <Route
+            path="/admin/product/:productId/reviews"
+            element={<AdminReviews />}
+          />
+          <Route path="/api.html" element={<ApiDocs />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

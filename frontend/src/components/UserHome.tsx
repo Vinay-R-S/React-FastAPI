@@ -115,7 +115,7 @@ export default function UserHome() {
                 variant="default"
                 onClick={() => navigate(`/product/${product.id}/reviews`)}
               >
-                View Reviews & Add Review
+                Reviews
               </Button>
             </CardFooter>
           </Card>
