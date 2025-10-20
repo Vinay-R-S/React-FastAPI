@@ -297,31 +297,23 @@ Create these tables in Supabase (SQL editor or GUI):
 ![Architecture](frontend/src/assets/Architecture.png)
 
 **Flow examples**
-
-* Sign up: UI -> `POST /signup` -> backend hashes password -> inserts into `users` -> returns JWT.
-* Add review: UI (with token) -> `POST /products/{id}/reviews` -> backend validates token -> inserts review with `user_id`.
-* Admin create product: UI (admin) -> `POST /products` (with admin token) -> backend verifies `is_admin` -> inserts product.
-
----
-
-## Troubleshooting & Tips
-
-* **Cannot connect to Supabase**: confirm `SUPABASE_URL` and `SUPABASE_KEY` in `backend/.env`. Check network, keys, and project region.
-* **CORS errors**: update `allow_origins` in `main.py` to match the frontend origin.
-* **JWT token errors**: if you change `SECRET_KEY`, previously issued tokens will be invalidated.
-* **Passwords failing login**: ensure password was hashed (bcrypt) during signup and you are checking with `bcrypt.checkpw` during login.
-* **Frontend fetch uses `127.0.0.1:8000`**: if running backend in docker or remote, update fetch URLs or add a `VITE_API_BASE` variable and centralize calls.
-
----
-
-## Next steps & improvements
-
-* Move `SECRET_KEY` to env var and load via `os.environ`.
-* Centralize API base URL in the frontend (e.g., `import.meta.env.VITE_API_BASE`).
-* Add pagination for `GET /products` and `GET /products/{id}/reviews`.
-* Add rate-limiting and input validation improvements.
-* Add improved role management & user verification email flow.
-* Add unit/integration tests, CI pipeline (GitHub Actions).
+```
+|- Sign up 
+|  |- UI (POST /signup) 
+|  |- backend hashes password 
+|  |- inserts into `users` 
+|  |- returns JWT
+|
+|- Add review
+|  |- UI (with token) (POST /products/{id}/reviews) 
+|  |- backend validates token 
+|  |- inserts review with (user_id)
+|
+|- Admin create product
+|  |- UI (POST /products) (admin with admin token) 
+|  |- backend verifies (is_admin) 
+|  |- inserts product
+```
 
 ---
 

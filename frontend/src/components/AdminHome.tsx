@@ -227,7 +227,7 @@ export default function AdminHome() {
         ))}
       </div>
 
-      {/* Add/Edit Product Dialog */}
+      {/* Add or Edit Product Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -237,7 +237,7 @@ export default function AdminHome() {
           </DialogHeader>
           <Input
             placeholder="Name"
-            className="mb-2"
+            className="mb-2 mt-4"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
@@ -253,7 +253,7 @@ export default function AdminHome() {
             onChange={(e) => setForm({ ...form, price: e.target.value })}
           />
           <DialogFooter>
-            <Button onClick={handleSubmit}>
+            <Button onClick={handleSubmit} className="text-white">
               {editProduct ? "Update" : "Add"}
             </Button>
           </DialogFooter>
