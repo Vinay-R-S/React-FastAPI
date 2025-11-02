@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import Navbar from "./Navbar";
+import { isAuthenticated, getUser } from "@/lib/auth";
 
 interface Product {
   id: number;
@@ -45,18 +47,19 @@ export default function UserHome() {
 
   useEffect(() => {
     // Defensive role check: if not logged in, go to login; if admin, redirect to admin home
-    const userStr = localStorage.getItem("user");
-    let user: any = null;
-    try {
-      user = userStr ? JSON.parse(userStr) : null;
-    } catch (e) {
-      user = null;
+    if (!isAuthenticated()) {
+      navigate("/");
+      return;
     }
-    if (!user) return navigate("/");
-    if (user.is_admin) return navigate("/admin-home");
+    
+    const user = getUser();
+    if (user?.is_admin) {
+      navigate("/admin-home");
+      return;
+    }
 
     fetchProducts();
-  }, []);
+  }, [navigate]);
 
   const filteredProducts = products
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -70,10 +73,12 @@ export default function UserHome() {
     });
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4 text-center">
-        Welcome to ProUX
-      </h1>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="p-6 container mx-auto">
+        <h1 className="text-3xl font-bold mb-4 text-center">
+          Welcome to ProUX
+        </h1>
 
       <div className="flex justify-between items-center mb-4">
         <Input
@@ -105,7 +110,7 @@ export default function UserHome() {
             </CardHeader>
             <CardContent>
               <p>{product.description || "No description"}</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-white opacity-80 mt-1">
                 Price: ₹{product.price || "N/A"}
               </p>
             </CardContent>
@@ -120,6 +125,7 @@ export default function UserHome() {
             </CardFooter>
           </Card>
         ))}
+      </div>
       </div>
     </div>
   );

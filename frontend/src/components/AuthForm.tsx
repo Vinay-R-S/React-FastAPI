@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FieldSet,
@@ -25,11 +25,30 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { setAuth, isAuthenticated, logout, getUser } from "@/lib/auth";
 
 function AuthForm() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showLoggedInMessage, setShowLoggedInMessage] = useState(false);
   const navigate = useNavigate();
+
+  // Check if already authenticated
+  useEffect(() => {
+    if (isAuthenticated()) {
+      setShowLoggedInMessage(true);
+    }
+  }, []);
+
+  const handleClearSession = async () => {
+    try {
+      await logout();
+      setShowLoggedInMessage(false);
+      toast.success("Session cleared. Please log in again.");
+    } catch (error) {
+      toast.error("Failed to clear session");
+    }
+  };
 
   const toggleMode = () => setIsSignUp((prev) => !prev);
 
@@ -50,6 +69,25 @@ function AuthForm() {
       "name"
     ) as HTMLInputElement | null;
     const name = nameInput ? nameInput.value : null;
+
+    // Validate signup form
+    if (isSignUp) {
+      if (!name || !name.trim()) {
+        toast.error("Please enter your full name");
+        return;
+      }
+      const confirmPassword = document.getElementById(
+        "confirm-password"
+      ) as HTMLInputElement | null;
+      if (!confirmPassword || confirmPassword.value !== password) {
+        toast.error("Passwords do not match");
+        return;
+      }
+      if (password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return;
+      }
+    }
 
     const endpoint = isSignUp ? "signup" : "login";
 
@@ -72,12 +110,9 @@ function AuthForm() {
             (isSignUp ? "Account created successfully!" : "Login successful!")
         );
 
-        // Store token and user data
-        if (data.access_token) {
-          localStorage.setItem("token", data.access_token);
-        }
-        if (data.user) {
-          localStorage.setItem("user", JSON.stringify(data.user));
+        // Store token and user data using auth utility
+        if (data.access_token && data.user) {
+          setAuth(data.access_token, data.user);
         }
 
         // Clear inputs
@@ -89,13 +124,9 @@ function AuthForm() {
         ) as HTMLInputElement | null;
         if (confirmPassword) confirmPassword.value = "";
 
-        // Redirect based on role
+        // Redirect to home page first, then to appropriate dashboard
         setTimeout(() => {
-          if (data.user?.is_admin) {
-            navigate("/admin-home");
-          } else {
-            navigate("/user-home");
-          }
+          navigate("/home");
         }, 1000);
       } else {
         toast.error(data.detail || "Something went wrong. Please try again.");
@@ -105,13 +136,48 @@ function AuthForm() {
     }
   };
 
+  const user = getUser();
+
   return (
     <div className="w-full">
-      <h1 className="w-full text-center text-2xl font-extrabold text-white mb-6">
-        ProUX
-      </h1>
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-extrabold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          ProUX
+        </h1>
+        <p className="text-white">
+          Your Product Review Platform
+        </p>
+      </div>
 
-      <Card className="w-full max-w-sm mx-auto gap-2">
+      {showLoggedInMessage && user && (
+        <Card className="w-full max-w-md mx-auto mb-4 border-blue-500 bg-blue-50 dark:bg-blue-950">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-3">
+              <p className="text-sm font-medium">
+                You're already logged in as <strong>{user.name}</strong>
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate("/home")}
+                >
+                  Continue
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearSession}
+                >
+                  Logout & Login Again
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="w-full max-w-md mx-auto gap-2 shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl">{title}</CardTitle>
         </CardHeader>
@@ -187,7 +253,7 @@ function AuthForm() {
           </CardContent>
 
           <CardFooter className="flex flex-col gap-2 mt-2">
-            <Button type="submit" className="w-full bg-[#e6e6e6] text-white">
+            <Button type="submit" className="w-full">
               {buttonText}
             </Button>
 
@@ -201,7 +267,7 @@ function AuthForm() {
                   e.preventDefault();
                   toggleMode();
                 }}
-                className="text-black inline-flex items-center justify-center rounded-md text-sm font-medium p-0 h-auto hover:underline"
+                className="text-foreground inline-flex items-center justify-center rounded-md text-sm font-medium p-0 h-auto hover:underline"
               >
                 {switchAction}
               </a>

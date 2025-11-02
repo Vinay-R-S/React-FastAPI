@@ -2,6 +2,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import AuthForm from "./components/AuthForm";
 import AdminHome from "./components/AdminHome";
 import UserHome from "./components/UserHome";
+import Home from "./components/Home";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProductDetails from "./components/ProductDetails";
 import AdminReviews from "./components/AdminReviews";
@@ -39,6 +40,15 @@ function App() {
                   <AuthForm />
                 </div>
               </div>
+            }
+          />
+
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
             }
           />
 

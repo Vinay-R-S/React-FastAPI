@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import Navbar from "./Navbar";
+import { isAuthenticated, getUser, getToken } from "@/lib/auth";
 
 interface Product {
   id: number;
@@ -55,18 +57,19 @@ export default function AdminHome() {
 
   useEffect(() => {
     // Defensive role check: if not admin, redirect to user home or login
-    const userStr = localStorage.getItem("user");
-    let user: any = null;
-    try {
-      user = userStr ? JSON.parse(userStr) : null;
-    } catch (e) {
-      user = null;
+    if (!isAuthenticated()) {
+      navigate("/");
+      return;
     }
-    if (!user) return navigate("/");
-    if (!user.is_admin) return navigate("/user-home");
+    
+    const user = getUser();
+    if (!user?.is_admin) {
+      navigate("/user-home");
+      return;
+    }
 
     fetchProducts();
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -80,11 +83,18 @@ export default function AdminHome() {
       : "http://127.0.0.1:8000/products";
 
     try {
+      const token = getToken();
+      if (!token) {
+        toast.error("Not authenticated");
+        navigate("/");
+        return;
+      }
+
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(form),
       });
@@ -108,9 +118,16 @@ export default function AdminHome() {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
 
     try {
+      const token = getToken();
+      if (!token) {
+        toast.error("Not authenticated");
+        navigate("/");
+        return;
+      }
+
       const res = await fetch(`http://127.0.0.1:8000/products/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
@@ -137,10 +154,12 @@ export default function AdminHome() {
     });
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4 text-center sm:text-left">
-        Admin Dashboard - ProUX
-      </h1>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="p-6 container mx-auto">
+        <h1 className="text-3xl font-bold mb-4 text-center sm:text-left">
+          Admin Dashboard - ProUX
+        </h1>
 
       {/* Controls: stack on small screens */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
@@ -186,7 +205,7 @@ export default function AdminHome() {
             </CardHeader>
             <CardContent>
               <p>{product.description || "No description"}</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-white opacity-80 mt-1">
                 Price: ₹{product.price || "N/A"}
               </p>
             </CardContent>
@@ -259,6 +278,7 @@ export default function AdminHome() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

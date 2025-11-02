@@ -121,7 +121,7 @@ const AdminReviews: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-2xl">{product.name}</CardTitle>
-              <p className="text-gray-600 mt-2">{product.description || "No description available"}</p>
+              <p className="text-white opacity-90 mt-2">{product.description || "No description available"}</p>
               <p className="text-lg font-semibold text-green-600 mt-2">
                 Price: ₹{product.price || "N/A"}
               </p>
@@ -139,7 +139,7 @@ const AdminReviews: React.FC = () => {
         {reviews.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <p className="text-gray-500">No reviews yet for this product.</p>
+              <p className="text-white opacity-80">No reviews yet for this product.</p>
             </CardContent>
           </Card>
         ) : (
@@ -155,21 +155,21 @@ const AdminReviews: React.FC = () => {
                           <span
                             key={i}
                             className={`text-lg ${
-                              i < r.rating ? "text-yellow-400" : "text-gray-300"
+                              i < r.rating ? "text-yellow-400" : "text-white opacity-30"
                             }`}
                           >
                             ★
                           </span>
                         ))}
-                        <span className="ml-2 text-sm text-gray-500">({r.rating}/5)</span>
+                        <span className="ml-2 text-sm text-white opacity-80">({r.rating}/5)</span>
                       </div>
                     </div>
-                    <p className="text-gray-700 mb-2">{r.review}</p>
-                    <div className="text-sm text-gray-500 mb-2">
+                    <p className="text-white mb-2">{r.review}</p>
+                    <div className="text-sm text-white opacity-80 mb-2">
                       <p>Email: {r.email}</p>
                       {r.phone_number && <p>Phone: {r.phone_number}</p>}
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-white opacity-70">
                       <p>Created: {new Date(r.created_at).toLocaleString()}</p>
                       {r.updated_at && r.updated_at !== r.created_at && (
                         <p>Updated: {new Date(r.updated_at).toLocaleString()}</p>

@@ -268,6 +268,8 @@ Create these tables in Supabase (SQL editor or GUI):
 * `email` (text, unique)
 * `password` (text) — hashed string
 * `is_admin` (boolean, default false)
+* `jwt_token` (text, nullable) — stores JWT token after login
+* `last_login` (timestamp, nullable) — tracks last login time
 * `created_at` (timestamp)
 
 ### `products`

@@ -166,6 +166,16 @@ def signup(data: SignupRequest):
         access_token = create_access_token(data={"sub": data.email})
         # print("JWT token created successfully")  # Debug log
         
+        # Store JWT token in Supabase users table
+        try:
+            supabase.table("users").update({
+                "jwt_token": access_token,
+                "last_login": datetime.utcnow().isoformat()
+            }).eq("id", created_user["id"]).execute()
+        except Exception as update_error:
+            # If jwt_token column doesn't exist, log but don't fail
+            print(f"Warning: Could not update JWT token in database: {str(update_error)}")
+        
         return {
             "message": "Signup successful!",
             "access_token": access_token,
@@ -203,6 +213,16 @@ def login(data: LoginRequest):
         # Create JWT token
         access_token = create_access_token(data={"sub": data.email})
         
+        # Store JWT token in Supabase users table
+        try:
+            supabase.table("users").update({
+                "jwt_token": access_token,
+                "last_login": datetime.utcnow().isoformat()
+            }).eq("id", user["id"]).execute()
+        except Exception as update_error:
+            # If jwt_token column doesn't exist, log but don't fail
+            print(f"Warning: Could not update JWT token in database: {str(update_error)}")
+        
         return {
             "message": "Login successful!",
             "access_token": access_token,
@@ -219,6 +239,21 @@ def login(data: LoginRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/logout")
+def logout(user=Depends(get_current_user)):
+    """Logout user by clearing JWT token from database."""
+    try:
+        # Clear JWT token from Supabase users table
+        supabase.table("users").update({
+            "jwt_token": None
+        }).eq("id", user["id"]).execute()
+        
+        return {"message": "Logout successful!"}
+    except Exception as e:
+        # Don't fail if update doesn't work
+        print(f"Warning: Could not clear JWT token: {str(e)}")
+        return {"message": "Logout successful!"}
 
 # Product Endpoints
 
