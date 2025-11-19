@@ -24,6 +24,13 @@ interface Review {
   review: string;
   created_at: string;
   updated_at: string;
+  admin_reply?: string;
+  helpful_votes: number;
+}
+
+interface Category {
+  id: number;
+  name: string;
 }
 
 interface User {
@@ -37,6 +44,8 @@ interface Product {
   name: string;
   description?: string;
   price?: string;
+  image_url?: string;
+  category_id?: number;
   created_at: string;
 }
 
@@ -57,6 +66,10 @@ const ProductDetails: React.FC = () => {
   });
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [error, setError] = useState("");
+  const [category, setCategory] = useState<Category | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 5;
 
   const fetchProduct = async () => {
     try {
@@ -65,6 +78,9 @@ const ProductDetails: React.FC = () => {
       if (data.data) {
         const foundProduct = data.data.find((p: Product) => p.id === parseInt(productId!));
         setProduct(foundProduct || null);
+        if (foundProduct?.category_id) {
+            fetchCategory(foundProduct.category_id);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -72,11 +88,23 @@ const ProductDetails: React.FC = () => {
     }
   };
 
+  const fetchCategory = async (id: number) => {
+    try {
+        const res = await fetch(`http://127.0.0.1:8000/categories`);
+        const data = await res.json();
+        const cat = data.data.find((c: Category) => c.id === id);
+        setCategory(cat || null);
+    } catch (err) {
+        console.error(err);
+    }
+  };
+
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/products/${productId}/reviews`);
+      const res = await fetch(`http://127.0.0.1:8000/products/${productId}/reviews?page=${page}&limit=${limit}`);
       const data = await res.json();
       setReviews(data.data || []);
+      setTotalPages(data.pagination?.pages || 1);
     } catch (err) {
       console.error(err);
       setError("Failed to load reviews");
@@ -227,6 +255,31 @@ const ProductDetails: React.FC = () => {
     }
   };
 
+  const handleVote = async (reviewId: number) => {
+    if (!token) {
+        toast.error("Login to vote");
+        return;
+    }
+    try {
+        const res = await fetch(`http://127.0.0.1:8000/reviews/${reviewId}/vote`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok) {
+            toast.success(data.message);
+            // Optimistically update UI or refetch
+            fetchReviews();
+        }
+    } catch {
+        toast.error("Failed to vote");
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, [page]);
+
   useEffect(() => {
     const loadData = async () => {
       if (productId) {
@@ -247,20 +300,30 @@ const ProductDetails: React.FC = () => {
     <div className="p-6 space-y-6">
       {/* Product Details */}
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl">{product.name}</CardTitle>
-              <p className="text-white opacity-90 mt-2">{product.description || "No description available"}</p>
-              <p className="text-lg font-semibold text-green-600 mt-2">
-                Price: ₹{product.price || "N/A"}
-              </p>
+        <div className="flex flex-col md:flex-row">
+            {product.image_url && (
+                <div className="w-full md:w-1/3 h-64 md:h-auto">
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none" />
+                </div>
+            )}
+            <div className="flex-1">
+                <CardHeader>
+                <div className="flex justify-between items-start">
+                    <div>
+                    <CardTitle className="text-2xl">{product.name}</CardTitle>
+                    {category && <span className="text-sm text-muted-foreground bg-secondary px-2 py-1 rounded mt-1 inline-block">{category.name}</span>}
+                    <p className="text-muted-foreground mt-2">{product.description || "No description available"}</p>
+                    <p className="text-lg font-semibold text-green-600 mt-2">
+                        Price: ₹{product.price || "N/A"}
+                    </p>
+                    </div>
+                    <Button variant="outline" onClick={() => navigate("/user-home")}>
+                    ← Back to Products
+                    </Button>
+                </div>
+                </CardHeader>
             </div>
-            <Button variant="outline" onClick={() => navigate("/user-home")}>
-              ← Back to Products
-            </Button>
-          </div>
-        </CardHeader>
+        </div>
       </Card>
 
       {/* Add/Edit Review Form */}
@@ -342,7 +405,7 @@ const ProductDetails: React.FC = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1 text-white">
+                <Button type="submit" className="flex-1">
                   {editingReview ? "Update Review" : "Submit Review"}
                 </Button>
                 {editingReview && (
@@ -360,7 +423,7 @@ const ProductDetails: React.FC = () => {
       {!currentUser && (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-white mb-4">Please log in to submit a review</p>
+            <p className="text-muted-foreground mb-4">Please log in to submit a review</p>
             <Button onClick={() => navigate("/")}>Go to Login</Button>
           </CardContent>
         </Card>
@@ -372,7 +435,7 @@ const ProductDetails: React.FC = () => {
         {reviews.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <p className="text-white opacity-80">No reviews yet. Be the first to review this product!</p>
+              <p className="text-muted-foreground">No reviews yet. Be the first to review this product!</p>
             </CardContent>
           </Card>
         ) : (
@@ -388,50 +451,84 @@ const ProductDetails: React.FC = () => {
                           <span
                             key={i}
                             className={`text-lg ${
-                              i < r.rating ? "text-yellow-400" : "text-white opacity-30"
+                              i < r.rating ? "text-yellow-400" : "text-muted-foreground/30"
                             }`}
                           >
                             ★
                           </span>
                         ))}
-                        <span className="ml-2 text-sm text-white opacity-80">({r.rating}/5)</span>
+                        <span className="ml-2 text-sm text-muted-foreground">({r.rating}/5)</span>
                       </div>
                     </div>
-                    <p className="text-white mb-2">{r.review}</p>
+                    <p className="mb-2">{r.review}</p>
                     {r.phone_number && (
-                      <p className="text-sm text-white opacity-80">Contact: {r.phone_number}</p>
+                      <p className="text-sm text-muted-foreground">Contact: {r.phone_number}</p>
                     )}
-                    <div className="text-xs text-white opacity-70 mt-2">
+                    <div className="text-xs text-muted-foreground mt-2">
                       <p>Created: {new Date(r.created_at).toLocaleString()}</p>
                       {r.updated_at && r.updated_at !== r.created_at && (
                         <p>Updated: {new Date(r.updated_at).toLocaleString()}</p>
                       )}
                     </div>
                   </div>
-                  {currentUser?.id === r.user_id && (
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleEdit(r)}
-                      >
-                        Edit
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={() => handleDelete(r.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {currentUser?.id === r.user_id && (
+                        <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleEdit(r)}
+                        >
+                            Edit
+                        </Button>
+                        <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => handleDelete(r.id)}
+                        >
+                            Delete
+                        </Button>
+                        </div>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => handleVote(r.id)}>
+                        👍 {r.helpful_votes || 0}
+                    </Button>
+                  </div>
                 </div>
+                {r.admin_reply && (
+                    <div className="mt-4 p-3 bg-muted rounded-md border-l-4 border-primary">
+                        <p className="text-sm font-semibold text-primary">Admin Reply:</p>
+                        <p className="text-sm">{r.admin_reply}</p>
+                    </div>
+                )}
               </CardContent>
             </Card>
           ))
         )}
       </div>
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-8">
+            <Button 
+                variant="outline" 
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+                Previous
+            </Button>
+            <span className="flex items-center px-4">
+                Page {page} of {totalPages}
+            </span>
+            <Button 
+                variant="outline" 
+                disabled={page === totalPages}
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            >
+                Next
+            </Button>
+        </div>
+      )}
     </div>
   );
 };

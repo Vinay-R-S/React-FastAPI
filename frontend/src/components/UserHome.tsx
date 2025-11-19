@@ -25,7 +25,14 @@ interface Product {
   name: string;
   description?: string;
   price?: string;
+  image_url?: string;
+  category_id?: number;
   created_at: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
 }
 
 export default function UserHome() {
@@ -33,15 +40,44 @@ export default function UserHome() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 9;
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/products");
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sort_by: sortBy === "date" ? "created_at" : "name",
+        order: sortBy === "date" ? "desc" : "asc",
+      });
+      
+      if (search) params.append("search", search);
+      if (selectedCategory !== "all") params.append("category_id", selectedCategory);
+
+      const res = await fetch(`http://127.0.0.1:8000/products?${params}`);
       const data = await res.json();
-      if (res.ok) setProducts(data.data || []);
-      else toast.error("Failed to fetch products.");
+      if (res.ok) {
+        setProducts(data.data || []);
+        setTotalPages(data.pagination?.pages || 1);
+      } else {
+        toast.error("Failed to fetch products.");
+      }
     } catch {
       toast.error("Server connection failed.");
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/categories");
+      const data = await res.json();
+      if (res.ok) setCategories(data.data || []);
+    } catch {
+      console.error("Failed to fetch categories");
     }
   };
 
@@ -58,19 +94,14 @@ export default function UserHome() {
       return;
     }
 
-    fetchProducts();
+    fetchCategories();
   }, [navigate]);
 
-  const filteredProducts = products
-    .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
-      if (sortBy === "date")
-        return (
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      return 0;
-    });
+  useEffect(() => {
+    fetchProducts();
+  }, [page, search, sortBy, selectedCategory]);
+
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,52 +111,102 @@ export default function UserHome() {
           Welcome to ProUX
         </h1>
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
         <Input
           placeholder="Search product..."
-          className="w-1/3"
+          className="w-full md:w-1/3"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
         />
 
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name">Name</SelectItem>
-            <SelectItem value="date">Added Date</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Select value={selectedCategory} onValueChange={(val) => {
+              setSelectedCategory(val);
+              setPage(1);
+          }}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id.toString()}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="date">Newest</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredProducts.map((product) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {products.map((product) => (
           <Card
             key={product.id}
-            className="shadow-md hover:shadow-lg transition"
+            className="shadow-md hover:shadow-lg transition flex flex-col h-full"
           >
+            {product.image_url && (
+                <div className="w-full h-48 overflow-hidden rounded-t-lg">
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                </div>
+            )}
             <CardHeader>
-              <CardTitle>{product.name}</CardTitle>
+              <CardTitle className="line-clamp-1">{product.name}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p>{product.description || "No description"}</p>
-              <p className="text-sm text-white opacity-80 mt-1">
-                Price: ₹{product.price || "N/A"}
+            <CardContent className="flex-grow">
+              <p className="line-clamp-2 text-muted-foreground mb-2">{product.description || "No description"}</p>
+              <p className="text-lg font-bold">
+                ₹{product.price || "N/A"}
               </p>
             </CardContent>
             <CardFooter>
               <Button
-                className="text-white"
+                className="w-full"
                 variant="default"
                 onClick={() => navigate(`/product/${product.id}/reviews`)}
               >
-                Reviews
+                View Details
               </Button>
             </CardFooter>
           </Card>
         ))}
       </div>
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-8">
+            <Button 
+                variant="outline" 
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+                Previous
+            </Button>
+            <span className="flex items-center px-4">
+                Page {page} of {totalPages}
+            </span>
+            <Button 
+                variant="outline" 
+                disabled={page === totalPages}
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            >
+                Next
+            </Button>
+        </div>
+      )}
       </div>
     </div>
   );

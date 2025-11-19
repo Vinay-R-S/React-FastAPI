@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   is_admin: boolean;
+  avatar_url?: string;
 }
 
 export const getToken = (): string | null => {

@@ -15,18 +15,6 @@ export default function Home() {
       navigate("/");
       return;
     }
-
-    // Auto-redirect after a brief moment to show welcome message
-    const timer = setTimeout(() => {
-      const currentUser = getUser();
-      if (currentUser?.is_admin) {
-        navigate("/admin-home");
-      } else {
-        navigate("/user-home");
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
   }, [navigate]);
 
   return (
@@ -38,16 +26,16 @@ export default function Home() {
             <CardTitle className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               Welcome to ProUX
             </CardTitle>
-            <p className="text-lg text-white">
+            <p className="text-lg text-muted-foreground">
               Your Product Review Platform
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
-              <h2 className="text-2xl font-semibold mb-2 text-white">
+              <h2 className="text-2xl font-semibold mb-2">
                 Hello, {user?.name || "User"}! 👋
               </h2>
-              <p className="text-white mb-6">
+              <p className="text-muted-foreground mb-6">
                 {user?.is_admin 
                   ? "You are logged in as an Administrator" 
                   : "You are logged in as a User"}
@@ -62,9 +50,6 @@ export default function Home() {
                   Go to Dashboard
                 </Button>
               </div>
-              <p className="text-sm text-white mt-4 opacity-80">
-                Redirecting automatically...
-              </p>
             </div>
           </CardContent>
         </Card>

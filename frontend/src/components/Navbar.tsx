@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -57,13 +57,22 @@ export default function Navbar() {
             Home
           </Button>
           {user.is_admin ? (
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/admin-home")}
-              className="hidden sm:inline-flex"
-            >
-              Dashboard
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/admin-home")}
+                className="hidden sm:inline-flex"
+              >
+                Dashboard
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/admin-dashboard")}
+                className="hidden sm:inline-flex"
+              >
+                Stats
+              </Button>
+            </>
           ) : (
             <Button
               variant="ghost"
@@ -77,7 +86,8 @@ export default function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-10 w-10 rounded-full">
+                  <AvatarImage src={user.avatar_url || "https://cdn.vectorstock.com/i/500p/29/53/gray-silhouette-avatar-for-male-profile-picture-vector-56412953.jpg"} className="rounded-full object-cover" />
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
               </Button>
@@ -86,10 +96,10 @@ export default function Navbar() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{user.name}</p>
-                  <p className="text-xs leading-none text-white opacity-80">
+                  <p className="text-xs leading-none text-muted-foreground">
                     {user.email}
                   </p>
-                  <p className="text-xs leading-none text-white opacity-80 mt-1">
+                  <p className="text-xs leading-none text-muted-foreground mt-1">
                     {user.is_admin ? "Administrator" : "User"}
                   </p>
                 </div>
@@ -102,6 +112,14 @@ export default function Navbar() {
                 onClick={() => navigate(user.is_admin ? "/admin-home" : "/user-home")}
               >
                 Dashboard
+              </DropdownMenuItem>
+              {user.is_admin && (
+                <DropdownMenuItem onClick={() => navigate("/admin-dashboard")}>
+                  Stats Dashboard
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => navigate("/profile")}>
+                Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">

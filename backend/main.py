@@ -30,15 +30,27 @@ app.add_middleware(
 )
 
 # Models 
+class CategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str]
+    description: Optional[str]
+
 class ProductCreate(BaseModel):
     name: str
     description: Optional[str] = None
     price: Optional[str] = None
+    image_url: Optional[str] = None
+    category_id: Optional[int] = None
 
 class ProductUpdate(BaseModel):
     name: Optional[str]
     description: Optional[str]
     price: Optional[str]
+    image_url: Optional[str]
+    category_id: Optional[int]
 
 class ReviewCreate(BaseModel):
     name: str
@@ -52,6 +64,9 @@ class ReviewUpdate(BaseModel):
     review: Optional[str]
     phone_number: Optional[str]
 
+class ReviewReply(BaseModel):
+    reply: str
+
 class SignupRequest(BaseModel):
     email: str
     password: str
@@ -61,6 +76,11 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str]
+    password: Optional[str]
+    avatar_url: Optional[str]
     
     
 # API docs path 
@@ -231,7 +251,8 @@ def login(data: LoginRequest):
                 "id": user["id"],
                 "name": user["name"],
                 "email": user["email"],
-                "is_admin": user.get("is_admin", False)
+                "is_admin": user.get("is_admin", False),
+                "avatar_url": user.get("avatar_url")
             }
         }
 
@@ -255,26 +276,140 @@ def logout(user=Depends(get_current_user)):
         print(f"Warning: Could not clear JWT token: {str(e)}")
         return {"message": "Logout successful!"}
 
+@app.put("/users/me")
+def update_user_profile(payload: UserProfileUpdate, user=Depends(get_current_user)):
+    """Update user profile (name, avatar, password)."""
+    try:
+        update_data = {}
+        if payload.name:
+            update_data["name"] = payload.name
+        if payload.avatar_url:
+            update_data["avatar_url"] = payload.avatar_url
+        if payload.password:
+            hashed_password = bcrypt.hashpw(payload.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            update_data["password"] = hashed_password
+            
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        resp = supabase.table("users").update(update_data).eq("id", user["id"]).execute()
+        
+        # Return updated user info (excluding password)
+        updated_user = resp.data[0]
+        return {
+            "message": "Profile updated",
+            "user": {
+                "id": updated_user["id"],
+                "name": updated_user["name"],
+                "email": updated_user["email"],
+                "is_admin": updated_user.get("is_admin", False),
+                "avatar_url": updated_user.get("avatar_url")
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Category Endpoints
+
+@app.get("/categories")
+def list_categories():
+    """List all categories."""
+    try:
+        resp = supabase.table("categories").select("*").order("name").execute()
+        return {"data": resp.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/categories", dependencies=[Depends(require_admin)])
+def create_category(payload: CategoryCreate):
+    """Create a new category (Admin only)."""
+    try:
+        resp = supabase.table("categories").insert({
+            "name": payload.name,
+            "description": payload.description
+        }).execute()
+        return {"message": "Category created", "category": resp.data[0]}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/categories/{category_id}", dependencies=[Depends(require_admin)])
+def delete_category(category_id: int):
+    """Delete a category (Admin only)."""
+    try:
+        resp = supabase.table("categories").delete().eq("id", category_id).execute()
+        return {"message": "Category deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Admin Dashboard Stats
+
+@app.get("/admin/stats", dependencies=[Depends(require_admin)])
+def get_admin_stats():
+    """Get dashboard statistics."""
+    try:
+        # Note: Supabase-py doesn't have a direct 'count' method in the same way as SQL, 
+        # but we can select 'id' with count='exact'.
+        
+        users_count = supabase.table("users").select("id", count="exact").execute().count
+        products_count = supabase.table("products").select("id", count="exact").execute().count
+        reviews_count = supabase.table("reviews").select("id", count="exact").execute().count
+        
+        # Calculate average rating
+        reviews = supabase.table("reviews").select("rating").execute()
+        avg_rating = 0
+        if reviews.data:
+            total_rating = sum(r["rating"] for r in reviews.data)
+            avg_rating = round(total_rating / len(reviews.data), 1)
+
+        return {
+            "total_users": users_count,
+            "total_products": products_count,
+            "total_reviews": reviews_count,
+            "average_rating": avg_rating
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # Product Endpoints
 
 @app.get("/products")
 def list_products(
     search: Optional[str] = Query(None),
+    category_id: Optional[int] = Query(None),
     sort_by: Optional[str] = Query("created_at"),
-    order: Optional[str] = Query("desc")
+    order: Optional[str] = Query("desc"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50)
 ):
-    """List products with search and sorting."""
+    """List products with search, filtering, sorting, and pagination."""
     try:
-        query = supabase.table("products").select("*")
+        query = supabase.table("products").select("*", count="exact")
 
         if search:
             query = query.ilike("name", f"%{search}%")
+        
+        if category_id:
+            query = query.eq("category_id", category_id)
 
         is_desc = order.lower() == "desc"
         query = query.order(sort_by, desc=is_desc)
+        
+        # Pagination
+        start = (page - 1) * limit
+        end = start + limit - 1
+        query = query.range(start, end)
 
         resp = query.execute()
-        return {"data": resp.data}
+        
+        return {
+            "data": resp.data,
+            "pagination": {
+                "total": resp.count,
+                "page": page,
+                "limit": limit,
+                "pages": (resp.count + limit - 1) // limit if resp.count else 0
+            }
+        }
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -282,13 +417,19 @@ def list_products(
 @app.post("/products", dependencies=[Depends(require_admin)])
 def create_product(payload: ProductCreate):
     now = datetime.utcnow().isoformat()
-    resp = supabase.table("products").insert({
+    product_data = {
         "name": payload.name,
         "description": payload.description,
         "price": payload.price,
         "created_at": now,
         "updated_at": now
-    }).execute()
+    }
+    if payload.image_url:
+        product_data["image_url"] = payload.image_url
+    if payload.category_id:
+        product_data["category_id"] = payload.category_id
+        
+    resp = supabase.table("products").insert(product_data).execute()
     return {"message": "Product created", "product": resp.data[0]}
 
 @app.put("/products/{product_id}", dependencies=[Depends(require_admin)])
@@ -314,18 +455,34 @@ def product_reviews(
     sort_by: Optional[str] = Query("created_at"),
     order: Optional[str] = Query("desc"),
     min_rating: Optional[int] = Query(None),
-    max_rating: Optional[int] = Query(None)
+    max_rating: Optional[int] = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50)
 ):
-    """List reviews with sort and filter options."""
+    """List reviews with sort, filter, and pagination options."""
     try:
-        query = supabase.table("reviews").select("*").eq("product_id", product_id)
+        query = supabase.table("reviews").select("*", count="exact").eq("product_id", product_id)
         if min_rating is not None:
             query = query.gte("rating", min_rating)
         if max_rating is not None:
             query = query.lte("rating", max_rating)
         query = query.order(sort_by, desc=(order.lower() == "desc"))
+        
+        # Pagination
+        start = (page - 1) * limit
+        end = start + limit - 1
+        query = query.range(start, end)
+        
         resp = query.execute()
-        return {"data": resp.data}
+        return {
+            "data": resp.data,
+            "pagination": {
+                "total": resp.count,
+                "page": page,
+                "limit": limit,
+                "pages": (resp.count + limit - 1) // limit if resp.count else 0
+            }
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -408,5 +565,63 @@ def admin_delete_review(review_id: int):
 
         resp = supabase.table("reviews").delete().eq("id", review_id).execute()
         return {"message": "Review deleted by admin"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/reviews/{review_id}/reply", dependencies=[Depends(require_admin)])
+def admin_reply_review(review_id: int, payload: ReviewReply):
+    """Admin replies to a review."""
+    try:
+        resp = supabase.table("reviews").update({
+            "admin_reply": payload.reply,
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", review_id).execute()
+        
+        if not resp.data:
+             raise HTTPException(status_code=404, detail="Review not found")
+             
+        return {"message": "Reply added", "review": resp.data[0]}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/reviews/{review_id}/vote")
+def vote_review_helpful(review_id: int, user=Depends(get_current_user)):
+    """Toggle helpful vote on a review."""
+    try:
+        # Check if user already voted
+        existing_vote = supabase.table("review_votes").select("*").eq("review_id", review_id).eq("user_id", user["id"]).execute()
+        
+        if existing_vote.data:
+            # Remove vote
+            supabase.table("review_votes").delete().eq("id", existing_vote.data[0]["id"]).execute()
+            # Decrement count
+            review = supabase.table("reviews").select("helpful_votes").eq("id", review_id).single().execute()
+            current_votes = review.data.get("helpful_votes", 0) or 0
+            
+            supabase.table("reviews").update({
+                "helpful_votes": max(0, current_votes - 1)
+            }).eq("id", review_id).execute()
+            
+            return {"message": "Vote removed", "voted": False}
+        else:
+            # Add vote
+            supabase.table("review_votes").insert({
+                "review_id": review_id,
+                "user_id": user["id"],
+                "vote_type": "helpful"
+            }).execute()
+            # Increment count (using RPC is better for concurrency, but for now we'll just update)
+            # Since we don't have the RPC function defined in the plan, let's do a read-update-write or just update.
+            # Actually, let's just fetch current count and increment.
+            
+            review = supabase.table("reviews").select("helpful_votes").eq("id", review_id).single().execute()
+            current_votes = review.data.get("helpful_votes", 0) or 0
+            
+            supabase.table("reviews").update({
+                "helpful_votes": current_votes + 1
+            }).eq("id", review_id).execute()
+            
+            return {"message": "Vote added", "voted": True}
+            
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

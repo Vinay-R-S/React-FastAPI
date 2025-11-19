@@ -6,6 +6,8 @@ import Home from "./components/Home";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProductDetails from "./components/ProductDetails";
 import AdminReviews from "./components/AdminReviews";
+import AdminDashboard from "./components/AdminDashboard";
+import UserProfile from "./components/UserProfile";
 import { ModeToggle } from "./components/mode-toggle";
 import { Toaster } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -57,6 +59,22 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <UserProfile />
               </ProtectedRoute>
             }
           />

@@ -32,7 +32,14 @@ interface Product {
   name: string;
   description?: string;
   price?: string;
+  image_url?: string;
+  category_id?: number;
   created_at: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
 }
 
 export default function AdminHome() {
@@ -42,7 +49,8 @@ export default function AdminHome() {
   const [sortBy, setSortBy] = useState("date");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", price: "" });
+  const [form, setForm] = useState({ name: "", description: "", price: "", image_url: "", category_id: "" });
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const fetchProducts = async () => {
     try {
@@ -69,7 +77,18 @@ export default function AdminHome() {
     }
 
     fetchProducts();
+    fetchCategories();
   }, [navigate]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/categories");
+      const data = await res.json();
+      if (res.ok) setCategories(data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch categories", error);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -104,7 +123,7 @@ export default function AdminHome() {
         toast.success(data.message || "Product saved successfully!");
         fetchProducts();
         setIsDialogOpen(false);
-        setForm({ name: "", description: "", price: "" });
+        setForm({ name: "", description: "", price: "", image_url: "", category_id: "" });
         setEditProduct(null);
       } else {
         toast.error(data.detail || "Failed to save product.");
@@ -182,10 +201,10 @@ export default function AdminHome() {
           </Select>
 
           <Button
-            className="text-white w-full sm:w-auto"
+            className="w-full sm:w-auto"
             onClick={() => {
               setEditProduct(null);
-              setForm({ name: "", description: "", price: "" });
+              setForm({ name: "", description: "", price: "", image_url: "", category_id: "" });
               setIsDialogOpen(true);
             }}
           >
@@ -205,14 +224,13 @@ export default function AdminHome() {
             </CardHeader>
             <CardContent>
               <p>{product.description || "No description"}</p>
-              <p className="text-sm text-white opacity-80 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Price: ₹{product.price || "N/A"}
               </p>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
               <div className="flex flex-wrap gap-2">
                 <Button
-                  className="text-white"
                   variant="outline"
                   onClick={() => navigate(`/admin/product/${product.id}/reviews`)}
                 >
@@ -226,6 +244,8 @@ export default function AdminHome() {
                       name: product.name,
                       description: product.description || "",
                       price: product.price || "",
+                      image_url: product.image_url || "",
+                      category_id: product.category_id?.toString() || "",
                     });
                     setIsDialogOpen(true);
                   }}
@@ -271,8 +291,29 @@ export default function AdminHome() {
             value={form.price}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
           />
+          <Input
+            placeholder="Image URL"
+            className="mb-2 mt-2"
+            value={form.image_url}
+            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+          />
+          <Select
+            value={form.category_id}
+            onValueChange={(val) => setForm({ ...form, category_id: val })}
+          >
+            <SelectTrigger className="w-full mb-2">
+              <SelectValue placeholder="Select Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id.toString()}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <DialogFooter>
-            <Button onClick={handleSubmit} className="text-white">
+            <Button onClick={handleSubmit}>
               {editProduct ? "Update" : "Add"}
             </Button>
           </DialogFooter>
